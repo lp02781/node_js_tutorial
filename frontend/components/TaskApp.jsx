@@ -1,16 +1,20 @@
-import { useTaskSocket } from "./hooks/useTaskSocket.js";
-import TextForm from "./components/TextForm.jsx";
-import TaskList from "./components/TaskList.jsx";
-import MessageList from "./components/MessageList.jsx";
+"use client";
+// "use client" = this component runs in the browser too, so it can use
+// state, effects, event handlers and WebSockets. (It was App.jsx in the Vite version.)
 
-export default function App() {
+import { useTaskSocket } from "@/hooks/useTaskSocket";
+import TextForm from "./TextForm";
+import TaskList from "./TaskList";
+import MessageList from "./MessageList";
+
+export default function TaskApp({ initialTasks }) {
   const { status, tasks, messages, error, addTask, deleteTask, sendData } =
-    useTaskSocket();
+    useTaskSocket(initialTasks);
 
   return (
-    <main>
+    <>
       <h1>My Task Manager</h1>
-      <p>React + Node.js + WebSocket + PostgreSQL</p>
+      <p>Next.js + Node.js + WebSocket + PostgreSQL</p>
 
       <div className="status">
         WebSocket: <span className="connection">{status}</span>
@@ -38,6 +42,6 @@ export default function App() {
 
       <h3>Received Messages</h3>
       <MessageList messages={messages} />
-    </main>
+    </>
   );
 }

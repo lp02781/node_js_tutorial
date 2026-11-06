@@ -1,13 +1,8 @@
 
 import http from "node:http";
-import { readFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-import { dirname, join, extname, normalize, sep } from "node:path";
 import pg from "pg";
 
 const PORT = 3000;
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const frontendDir = join(__dirname, "../frontend/dist");  // React build output
 
 const db = new pg.Pool({
   connectionString: process.env.DATABASE_URL
@@ -38,42 +33,6 @@ async function readJSON(req) {
     }
   }
   return JSON.parse(body);
-}
-
-// Vite puts hashed bundles in /assets, so serve any file in dist by extension
-const mimeTypes = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".ico": "image/x-icon"
-};
-
-// Friendly URLs -> files
-const aliases = {
-  "/": "/index.html",
-  "/docs": "/docs.html"
-};
-
-async function serveStatic(path, res) {
-  const filePath = normalize(join(frontendDir, aliases[path] ?? path));
-
-  // Block path traversal like /../backend/server.js
-  if (!filePath.startsWith(frontendDir + sep)) return false;
-
-  const contentType = mimeTypes[extname(filePath)];
-  if (!contentType) return false;
-
-  try {
-    const content = await readFile(filePath);
-    res.writeHead(200, { "Content-Type": contentType });
-    res.end(content);
-    return true;
-  } catch {
-    return false;  // file not found -> fall through to 404
-  }
 }
 
 const server = http.createServer(async (req, res) => {
@@ -127,11 +86,6 @@ const server = http.createServer(async (req, res) => {
       return res.end();
     }
 
-    // Serve frontend
-    if (req.method === "GET" && await serveStatic(path, res)) {
-      return;
-    }
-
     sendJSON(res, 404, { error: "Not found" });
   } catch (error) {
     console.error(error);
@@ -140,5 +94,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Backend listening on port ${PORT}`);
+  console.log(`Backend API listening on port ${PORT}`);
 });

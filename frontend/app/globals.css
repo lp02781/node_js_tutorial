@@ -62,3 +62,15 @@ li {
 .empty {
   color: #666;
 }
+
+nav {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+ul.plain li {
+  display: list-item;
+  border: none;
+  padding: 4px 0;
+}

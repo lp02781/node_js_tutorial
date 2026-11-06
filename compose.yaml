@@ -1,12 +1,24 @@
 
 services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nodejs_frontend
+    ports:
+      - "3000:3000"        # open http://localhost:3000
+    environment:
+      BACKEND_URL: "http://web:3000"
+    depends_on:
+      - web
+    restart: unless-stopped
+
   web:
     build:
       context: .
       dockerfile: backend/Dockerfile
     container_name: nodejs_web
-    ports:
-      - "3000:3000"
+    # no host port: only reachable through Next.js (/api) and the websocket service
     environment:
       DATABASE_URL: "postgres://appuser:devpassword@db:5432/myapp"
     depends_on:

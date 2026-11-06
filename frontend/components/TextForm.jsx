@@ -1,3 +1,5 @@
+"use client";  // uses useState + event handlers
+
 import { useState } from "react";
 
 // Reusable "input + button" form, used for both tasks and messages.

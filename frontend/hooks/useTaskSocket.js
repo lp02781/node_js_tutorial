@@ -1,20 +1,20 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 
-const protocol = location.protocol === "https:" ? "wss:" : "ws:";
-const WS_URL = `${protocol}//${location.hostname}:3001`;
-
 // Custom hook: owns the WebSocket connection and exposes its data as React state.
 // Any component that calls it re-renders automatically when the state changes.
-export function useTaskSocket() {
+export function useTaskSocket(initialTasks = []) {
   const socketRef = useRef(null);  // survives re-renders without causing one
   const [status, setStatus] = useState("Connecting...");
-  const [tasks, setTasks] = useState([]);
+  const [tasks, setTasks] = useState(initialTasks);  // server-rendered list first
   const [messages, setMessages] = useState([]);
   const [error, setError] = useState("");
 
   // Runs once after the component mounts; the returned function runs on unmount.
   useEffect(() => {
-    const socket = new WebSocket(WS_URL);
+    // `location` only exists in the browser. Client components are ALSO
+    // rendered on the server, so browser-only code must live in useEffect.
+    const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+    const socket = new WebSocket(`${protocol}//${location.hostname}:3001`);
     socketRef.current = socket;
 
     socket.onopen = () => {
