@@ -41,9 +41,26 @@ async function readJSON(req) {
 }
 
 const staticFiles = {
-  "/": ["index.html", "text/html; charset=utf-8"],
-  "/app.js": ["app.js", "text/javascript; charset=utf-8"],
-  "/style.css": ["style.css", "text/css; charset=utf-8"]
+  "/": [
+    "index.html",
+    "text/html; charset=utf-8"
+  ],
+  "/app.js": [
+    "app.js",
+    "text/javascript; charset=utf-8"
+  ],
+  "/style.css": [
+    "style.css",
+    "text/css; charset=utf-8"
+  ],
+  "/docs": [
+    "docs.html",
+    "text/html; charset=utf-8"
+  ],
+  "/openapi.json": [
+    "openapi.json",
+    "application/json; charset=utf-8"
+  ]
 };
 
 const server = http.createServer(async (req, res) => {
