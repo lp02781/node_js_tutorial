@@ -1,135 +1,77 @@
-
-import http from "node:http";
-import { readFile } from "node:fs/promises";
+import Fastify from "fastify";
+import swagger from "@fastify/swagger";
+import swaggerUi from "@fastify/swagger-ui";
+import fastifyStatic from "@fastify/static";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import pg from "pg";
+
+import { initDb } from "./db.js";
+import { taskSchema, errorSchema } from "./schemas.js";
+import tasksRoutes from "./routes/tasks.js";
 
 const PORT = 3000;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const frontendDir = join(__dirname, "../frontend");
 
-const db = new pg.Pool({
-  connectionString: process.env.DATABASE_URL
-});
+await initDb();
 
-// Create the tasks table automatically
-await db.query(`
-  CREATE TABLE IF NOT EXISTS tasks (
-    id SERIAL PRIMARY KEY,
-    title TEXT NOT NULL
-  )
-`);
-
-function sendJSON(res, status, data) {
-  res.writeHead(status, {
-    "Content-Type": "application/json; charset=utf-8"
-  });
-  res.end(JSON.stringify(data));
-}
-
-// Limit incoming request size
-async function readJSON(req) {
-  let body = "";
-  for await (const chunk of req) {
-    body += chunk;
-    if (body.length > 10000) {
-      throw new Error("Request too large");
-    }
-  }
-  return JSON.parse(body);
-}
-
-const staticFiles = {
-  "/": [
-    "index.html",
-    "text/html; charset=utf-8"
-  ],
-  "/app.js": [
-    "app.js",
-    "text/javascript; charset=utf-8"
-  ],
-  "/style.css": [
-    "style.css",
-    "text/css; charset=utf-8"
-  ],
-  "/docs": [
-    "docs.html",
-    "text/html; charset=utf-8"
-  ],
-  "/openapi.json": [
-    "openapi.json",
-    "application/json; charset=utf-8"
-  ]
-};
-
-const server = http.createServer(async (req, res) => {
-  try {
-    const path = new URL(req.url, "http://localhost").pathname;
-
-    // GET /api/tasks
-    if (req.method === "GET" && path === "/api/tasks") {
-      const result = await db.query(
-        "SELECT * FROM tasks ORDER BY id DESC"
-      );
-      return sendJSON(res, 200, result.rows);
-    }
-
-    // POST /api/tasks
-    if (req.method === "POST" && path === "/api/tasks") {
-      let data;
-      try {
-        data = await readJSON(req);
-      } catch {
-        return sendJSON(res, 400, { error: "Invalid JSON" });
-      }
-
-      if (typeof data.title !== "string" || !data.title.trim() || data.title.length > 200 ) 
-      {
-        return sendJSON(res, 400, {
-          error: "Title must be 1-200 characters"
-        });
-      }
-
-      const result = await db.query(
-        "INSERT INTO tasks (title) VALUES ($1) RETURNING *",
-        [data.title.trim()]
-      );
-
-      return sendJSON(res, 201, result.rows[0]);
-    }
-
-    // DELETE /api/tasks/:id
-    const match = path.match(/^\/api\/tasks\/(\d+)$/);
-
-    if (req.method === "DELETE" && match) {
-      const id = Number(match[1]);
-
-      if (!Number.isSafeInteger(id) || id <= 0) {
-        return sendJSON(res, 400, { error: "Invalid ID" });
-      }
-
-      await db.query("DELETE FROM tasks WHERE id = $1", [id]);
-      res.writeHead(204);
-      return res.end();
-    }
-
-    // Serve frontend
-    if (req.method === "GET" && staticFiles[path]) {
-      const [filename, contentType] = staticFiles[path];
-      const content = await readFile(join(frontendDir, filename));
-
-      res.writeHead(200, { "Content-Type": contentType });
-      return res.end(content);
-    }
-
-    sendJSON(res, 404, { error: "Not found" });
-  } catch (error) {
-    console.error(error);
-    sendJSON(res, 500, { error: "Internal server error" });
+const app = Fastify({
+  logger: true,       // built-in request logging (pino)
+  bodyLimit: 10000,   // reject bodies over 10 KB with 413
+  ajv: {
+    // "example" is an OpenAPI keyword (for Swagger UI), not JSON Schema;
+    // tell the validator to accept it
+    customOptions: { keywords: ["example"] }
   }
 });
 
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Backend listening on port ${PORT}`);
+// --- 404 for anything not matched ---
+// (handlers apply only to routes registered AFTER them, so set them first)
+app.setNotFoundHandler((req, reply) => {
+  reply.code(404).send({ error: "Not found" });
 });
+
+// --- Central error handler: validation errors, bad JSON, too large, crashes ---
+app.setErrorHandler((err, req, reply) => {
+  const status = err.statusCode ?? 500;
+
+  if (status >= 500) {
+    req.log.error(err);
+    return reply.code(500).send({ error: "Internal server error" });
+  }
+
+  // e.g. "body/title must NOT have more than 200 characters"
+  reply.code(status).send({ error: err.message });
+});
+
+// --- Shared schemas, usable as { $ref: "Task#" } in any route ---
+app.addSchema(taskSchema);
+app.addSchema(errorSchema);
+
+// --- Swagger: must be registered BEFORE the routes it documents ---
+await app.register(swagger, {
+  openapi: {
+    info: {
+      title: "Node.js Tutorial API",
+      version: "1.0.0",
+      description: "Fastify REST API with PostgreSQL"
+    },
+    servers: [{ url: "/", description: "Current server" }]
+  },
+  // Name components after their $id ("Task") instead of "def-0"
+  refResolver: {
+    buildLocalReference: (json, baseUri, fragment, i) => json.$id || `def-${i}`
+  }
+});
+await app.register(swaggerUi, { routePrefix: "/docs" });
+
+// --- API routes ---
+await app.register(tasksRoutes, { prefix: "/api/tasks" });
+
+// Raw spec, generated from the route schemas
+app.get("/openapi.json", { schema: { hide: true } }, () => app.swagger());
+
+// --- Frontend: index.html, app.js, style.css ---
+await app.register(fastifyStatic, { root: frontendDir });
+
+await app.listen({ port: PORT, host: "0.0.0.0" });
