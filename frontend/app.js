@@ -29,6 +29,16 @@ socket.onmessage = (event) => {
   if (message.type === "error") {
     errorText.textContent = message.message;
   }
+  if (message.type === "received") {
+    showMessage("Acknowledged", message.data);
+  }
+
+  if (message.type === "broadcast") {
+    showMessage(
+      "Broadcast",
+      `${message.data} (${message.timestamp})`
+    );
+  }
 };
 
 // Display the task list
@@ -91,3 +101,32 @@ socket.onclose = () => {
 socket.onerror = () => {
   errorText.textContent = "WebSocket connection error";
 };
+
+// Messaging elements
+const messageForm = document.getElementById("message-form");
+const messageInput = document.getElementById("message-input");
+const messages = document.getElementById("messages");
+
+// Send data to WebSocket server
+messageForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const data = messageInput.value.trim();
+  if (!data) return;
+
+  const sent = sendMessage({
+    type: "send_data",
+    data: data
+  });
+
+  if (sent) {
+    messageInput.value = "";
+  }
+});
+
+// Display received data
+function showMessage(type, data) {
+  const li = document.createElement("li");
+  li.textContent = `${type}: ${data}`;
+  messages.prepend(li);
+}

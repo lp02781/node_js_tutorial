@@ -111,6 +111,31 @@ wss.on("connection", (socket) => {
         return;
       }
 
+      if (message.type === "send_data") {
+        // Validate received data
+        if (typeof message.data !== "string" ||
+            message.data.length > 1000) {
+          throw new Error("Invalid data");
+        }
+
+        console.log("Received:", message.data);
+
+        // Reply only to the sender
+        send(socket, {
+          type: "received",
+          data: message.data
+        });
+
+        // Broadcast to every connected browser
+        broadcast({
+          type: "broadcast",
+          data: message.data,
+          timestamp: new Date().toISOString()
+        });
+
+        return;
+      }
+
       throw new Error("Unknown message type");
     } catch (error) {
       send(socket, {
