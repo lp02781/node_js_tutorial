@@ -10,7 +10,8 @@ RUN npm install --omit=dev
 
 WORKDIR /app
 
-COPY backend/server.js ./backend/server.js
+COPY backend/*.js ./backend/
+COPY backend/routes ./backend/routes
 COPY frontend ./frontend
 
 EXPOSE 3000

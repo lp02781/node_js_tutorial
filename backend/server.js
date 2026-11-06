@@ -1,135 +1,54 @@
-
-import http from "node:http";
-import { readFile } from "node:fs/promises";
+import express from "express";
+import morgan from "morgan";
+import swaggerUi from "swagger-ui-express";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import pg from "pg";
+
+import { initDb } from "./db.js";
+import { openapiSpec } from "./swagger.js";
+import tasksRouter from "./routes/tasks.js";
 
 const PORT = 3000;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const frontendDir = join(__dirname, "../frontend");
 
-const db = new pg.Pool({
-  connectionString: process.env.DATABASE_URL
+await initDb();
+
+const app = express();
+
+// --- Middleware: runs for every request, in order ---
+app.use(morgan("dev"));                       // request logging
+app.use(express.json({ limit: "10kb" }));     // parse JSON body into req.body, reject >10 KB
+
+// --- API routes ---
+app.use("/api/tasks", tasksRouter);
+
+// --- API docs, generated from the @openapi comments in routes/ ---
+app.get("/openapi.json", (req, res) => res.json(openapiSpec));
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapiSpec));
+
+// --- Frontend: serves index.html, app.js, style.css with correct MIME types ---
+app.use(express.static(frontendDir));
+
+// --- 404 for anything not matched above ---
+app.use((req, res) => {
+  res.status(404).json({ error: "Not found" });
 });
 
-// Create the tasks table automatically
-await db.query(`
-  CREATE TABLE IF NOT EXISTS tasks (
-    id SERIAL PRIMARY KEY,
-    title TEXT NOT NULL
-  )
-`);
-
-function sendJSON(res, status, data) {
-  res.writeHead(status, {
-    "Content-Type": "application/json; charset=utf-8"
-  });
-  res.end(JSON.stringify(data));
-}
-
-// Limit incoming request size
-async function readJSON(req) {
-  let body = "";
-  for await (const chunk of req) {
-    body += chunk;
-    if (body.length > 10000) {
-      throw new Error("Request too large");
-    }
+// --- Central error handler (4 args = error middleware) ---
+// Express 5 forwards errors thrown in async handlers here automatically.
+app.use((err, req, res, next) => {
+  if (err.type === "entity.parse.failed") {
+    return res.status(400).json({ error: "Invalid JSON" });
   }
-  return JSON.parse(body);
-}
-
-const staticFiles = {
-  "/": [
-    "index.html",
-    "text/html; charset=utf-8"
-  ],
-  "/app.js": [
-    "app.js",
-    "text/javascript; charset=utf-8"
-  ],
-  "/style.css": [
-    "style.css",
-    "text/css; charset=utf-8"
-  ],
-  "/docs": [
-    "docs.html",
-    "text/html; charset=utf-8"
-  ],
-  "/openapi.json": [
-    "openapi.json",
-    "application/json; charset=utf-8"
-  ]
-};
-
-const server = http.createServer(async (req, res) => {
-  try {
-    const path = new URL(req.url, "http://localhost").pathname;
-
-    // GET /api/tasks
-    if (req.method === "GET" && path === "/api/tasks") {
-      const result = await db.query(
-        "SELECT * FROM tasks ORDER BY id DESC"
-      );
-      return sendJSON(res, 200, result.rows);
-    }
-
-    // POST /api/tasks
-    if (req.method === "POST" && path === "/api/tasks") {
-      let data;
-      try {
-        data = await readJSON(req);
-      } catch {
-        return sendJSON(res, 400, { error: "Invalid JSON" });
-      }
-
-      if (typeof data.title !== "string" || !data.title.trim() || data.title.length > 200 ) 
-      {
-        return sendJSON(res, 400, {
-          error: "Title must be 1-200 characters"
-        });
-      }
-
-      const result = await db.query(
-        "INSERT INTO tasks (title) VALUES ($1) RETURNING *",
-        [data.title.trim()]
-      );
-
-      return sendJSON(res, 201, result.rows[0]);
-    }
-
-    // DELETE /api/tasks/:id
-    const match = path.match(/^\/api\/tasks\/(\d+)$/);
-
-    if (req.method === "DELETE" && match) {
-      const id = Number(match[1]);
-
-      if (!Number.isSafeInteger(id) || id <= 0) {
-        return sendJSON(res, 400, { error: "Invalid ID" });
-      }
-
-      await db.query("DELETE FROM tasks WHERE id = $1", [id]);
-      res.writeHead(204);
-      return res.end();
-    }
-
-    // Serve frontend
-    if (req.method === "GET" && staticFiles[path]) {
-      const [filename, contentType] = staticFiles[path];
-      const content = await readFile(join(frontendDir, filename));
-
-      res.writeHead(200, { "Content-Type": contentType });
-      return res.end(content);
-    }
-
-    sendJSON(res, 404, { error: "Not found" });
-  } catch (error) {
-    console.error(error);
-    sendJSON(res, 500, { error: "Internal server error" });
+  if (err.type === "entity.too.large") {
+    return res.status(413).json({ error: "Request too large" });
   }
+  console.error(err);
+  res.status(500).json({ error: "Internal server error" });
 });
 
-server.listen(PORT, "0.0.0.0", () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Backend listening on port ${PORT}`);
+  console.log(`API docs at http://localhost:${PORT}/docs`);
 });
