@@ -26,7 +26,7 @@ h1 {
   border-radius: 6px;
 }
 
-#connection {
+.connection {
   font-weight: bold;
 }
 
@@ -55,6 +55,10 @@ li {
   border-bottom: 1px solid #ddd;
 }
 
-#error {
+.error {
   color: darkred;
+}
+
+.empty {
+  color: #666;
 }
