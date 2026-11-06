@@ -1,0 +1,38 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Node.js Task Manager</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main>
+    <h1>My Task Manager</h1>
+    <p>JavaScript + Node.js + WebSocket + PostgreSQL</p>
+
+    <div class="status">
+      WebSocket: <span id="connection">Connecting...</span>
+    </div>
+
+    <form id="task-form">
+      <input
+        id="task-input"
+        type="text"
+        maxlength="200"
+        placeholder="Enter a new task"
+        required
+      >
+      <button type="submit">Add Task</button>
+    </form>
+
+    <h2>Tasks</h2>
+    <ul id="task-list"></ul>
+
+    <p id="error" role="alert"></p>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

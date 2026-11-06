@@ -1,0 +1,45 @@
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: nodejs_web
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgres://appuser:devpassword@db:5432/myapp"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:17-alpine
+    container_name: nodejs_postgres
+    environment:
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: myapp
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser -d myapp"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  websocket:
+    build:
+      context: ./websocket
+      dockerfile: Dockerfile
+    container_name: nodejs_websocket
+    ports:
+      - "3001:3001"
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
