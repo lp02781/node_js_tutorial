@@ -2,22 +2,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Page settings: text encoding and mobile-friendly width -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
+  <!-- Page title shown in the browser tab -->
   <title>Node.js API Documentation</title>
 
+  <!-- Load the Swagger UI styles from a CDN -->
   <link
     rel="stylesheet"
     href="https://unpkg.com/swagger-ui-dist@5.34.1/swagger-ui.css"
   >
 </head>
 <body>
+  <!-- Swagger UI will draw the API docs inside this box -->
   <div id="swagger-ui"></div>
 
+  <!-- Load the Swagger UI script from a CDN -->
   <script src="https://unpkg.com/swagger-ui-dist@5.34.1/swagger-ui-bundle.js"></script>
 
   <script>
+    // When the page has loaded, start Swagger UI
+    // It reads the API description from /openapi.json
     window.onload = () => {
       SwaggerUIBundle({
         url: "/openapi.json",

@@ -1,28 +1,38 @@
 
 services:
+  # Backend server: serves the API and the frontend files
   web:
+    # Build the image from backend/Dockerfile
     build:
       context: .
       dockerfile: backend/Dockerfile
     container_name: nodejs_web
+    # Open port 3000 on your computer
     ports:
       - "3000:3000"
+    # Tell the backend how to connect to the database
     environment:
       DATABASE_URL: "postgres://appuser:devpassword@db:5432/myapp"
+    # Wait until the database is healthy before starting
     depends_on:
       db:
         condition: service_healthy
+    # Restart the container if it stops, unless you stop it yourself
     restart: unless-stopped
 
+  # PostgreSQL database
   db:
     image: postgres:17-alpine
     container_name: nodejs_postgres
+    # Database user, password, and name
     environment:
       POSTGRES_USER: appuser
       POSTGRES_PASSWORD: devpassword
       POSTGRES_DB: myapp
+    # Keep the data saved even if the container is removed
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # Check every 5 seconds if the database is ready
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U appuser -d myapp"]
       interval: 5s
@@ -30,16 +40,21 @@ services:
       retries: 10
     restart: unless-stopped
 
+  # WebSocket server: sends real-time updates to browsers
   websocket:
+    # Build the image from websocket/Dockerfile
     build:
       context: ./websocket
       dockerfile: Dockerfile
     container_name: nodejs_websocket
+    # Open port 3001 on your computer
     ports:
       - "3001:3001"
+    # Start after the backend
     depends_on:
       - web
     restart: unless-stopped
 
+# Named volume that stores the database files
 volumes:
   postgres_data:

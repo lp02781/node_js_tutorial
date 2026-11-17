@@ -1,4 +1,5 @@
 
+/* Page background, font, and outer spacing */
 body {
   font-family: Arial, sans-serif;
   background: #f4f6f8;
@@ -6,6 +7,7 @@ body {
   padding: 50px 20px;
 }
 
+/* White card in the center of the page */
 main {
   max-width: 600px;
   margin: auto;
@@ -15,10 +17,12 @@ main {
   box-shadow: 0 4px 15px #00000015;
 }
 
+/* Remove the extra space above the main heading */
 h1 {
   margin-top: 0;
 }
 
+/* Box that shows the WebSocket connection status */
 .status {
   margin: 20px 0;
   padding: 12px;
@@ -26,26 +30,31 @@ h1 {
   border-radius: 6px;
 }
 
+/* Make the connection text bold */
 #connection {
   font-weight: bold;
 }
 
+/* Put the input and button side by side */
 form {
   display: flex;
   gap: 10px;
 }
 
+/* Let the input fill the free space */
 input {
   flex: 1;
   min-width: 0;
   padding: 12px;
 }
 
+/* Button size and pointer cursor */
 button {
   padding: 10px 15px;
   cursor: pointer;
 }
 
+/* Each list item: text on the left, button on the right */
 li {
   display: flex;
   justify-content: space-between;
@@ -55,6 +64,7 @@ li {
   border-bottom: 1px solid #ddd;
 }
 
+/* Show error messages in red */
 #error {
   color: darkred;
 }

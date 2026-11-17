@@ -2,20 +2,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Page settings: text encoding and mobile-friendly width -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Page title shown in the browser tab -->
   <title>Node.js Task Manager</title>
+
+  <!-- Load the page styles -->
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <main>
+    <!-- Page heading -->
     <h1>My Task Manager</h1>
     <p>JavaScript + Node.js + WebSocket + PostgreSQL</p>
 
+    <!-- Shows if the WebSocket is connected or not -->
     <div class="status">
       WebSocket: <span id="connection">Connecting...</span>
     </div>
 
+    <!-- Form to add a new task -->
     <form id="task-form">
       <input
         id="task-input"
@@ -27,11 +35,14 @@
       <button type="submit">Add Task</button>
     </form>
 
+    <!-- The task list is filled by app.js -->
     <h2>Tasks</h2>
     <ul id="task-list"></ul>
 
+    <!-- Error messages appear here -->
     <p id="error" role="alert"></p>
 
+    <!-- Form to send a message through the WebSocket -->
     <h2>WebSocket Messaging</h2>
 
     <form id="message-form">
@@ -44,11 +55,13 @@
       <button type="submit">Send</button>
     </form>
 
+    <!-- Messages from the server appear here -->
     <h3>Received Messages</h3>
     <ul id="messages"></ul>
 
   </main>
 
+  <!-- Load the page script at the end, after the HTML is ready -->
   <script src="/app.js"></script>
 </body>
 </html>
